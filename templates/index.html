@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <title>Replace dataset in .carto file</title>
+        <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
+        <!-- HTML5 shim and Respond.js for IE8 support of HTML5 elements and media queries -->
+        <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+        <!--[if lt IE 9]>
+            <script src="https://oss.maxcdn.com/html5shiv/3.7.3/html5shiv.min.js"></script>
+            <script src="https://oss.maxcdn.com/respond/1.4.2/respond.min.js"></script>
+        <![endif]-->
+    </head>
+    <body>
+        <div class="container">
+            <h1>Replace dataset in .carto file</h1>
+            <div class="alert alert-warning" role="alert">
+                <ul>
+                    <li>New datasets must be existing datasets on the CARTO account at the time of generating the new .carto file</li>
+                    <li>New datasets must have the same structure as the old ones, otherwise the visualization will not render</li>
+                    <li>When the new .carto file is uploaded, if the new datasets already exist on the target CARTO account, they will be respected; if not, they will be created alongside with the visualization</li>
+                </ul>
+            </div>
+            <div class="row">
+                <div class="col-md-6 col-md-offset-3">
+                    {% from "_formhelpers.html" import render_field %}
+                    <form method="POST" enctype="multipart/form-data">
+                        {{ form.csrf_token }}
+                        {{ render_field(form.carto_api_endpoint) }}
+                        {{ render_field(form.carto_api_key) }}
+                        {{ render_field(form.original_dotcarto_file) }}
+                        {{ render_field(form.old_dataset_names) }}
+                        {{ render_field(form.new_dataset_names) }}
+                        <input type="submit" class="btn btn-primary" value="Submit" />
+                    </form>
+                </div>
+            </div>
+        </div>
+    </body>
+</html>

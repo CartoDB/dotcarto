@@ -1,6 +1,7 @@
 import ConfigParser
-from os.path import join, dirname, basename
+from os.path import join
 from zipfile import ZipFile
+from StringIO import StringIO
 
 from carto.sql import SQLClient
 from carto.auth import APIKeyAuthClient
@@ -8,18 +9,15 @@ from carto.auth import APIKeyAuthClient
 config = ConfigParser.RawConfigParser()
 config.read("dotcarto.conf")
 
-CARTO_BASE_URL = config.get('carto', 'base_url')
-CARTO_API_KEY = config.get('carto', 'api_key')
-
-
-sql = SQLClient(APIKeyAuthClient(CARTO_BASE_URL, CARTO_API_KEY))
-
 
 class DotCartoFile(object):
     replacements = []
+    visualization_id = None
+    json = None
 
-    def __init__(self, carto_file_path):
-        self.carto_file_path = carto_file_path
+    def __init__(self, dotcarto_file, endpoint_base_url, api_key):
+        self.dotcarto_file = dotcarto_file
+        self.sql = SQLClient(APIKeyAuthClient(endpoint_base_url, api_key))
 
     def replace_dataset(self, original_dataset_name, new_dataset_name):
         self.replacements.append({
@@ -27,20 +25,30 @@ class DotCartoFile(object):
             "new_dataset_name": new_dataset_name
         })
 
-    def get_new(self):
-        with ZipFile(self.carto_file_path) as original_carto_file:
-            visualization_id = original_carto_file.namelist()[0][:-1]
-            json_file_relative_path = join(visualization_id, visualization_id + ".carto.json")
-            json = original_carto_file.read(json_file_relative_path)
+    def replace_datasets_in_dotcarto_file(self, zip_buffer):
+        for replacement in self.replacements:
+            original_dataset_name = replacement["original_dataset_name"]
+            new_dataset_name = replacement["new_dataset_name"]
 
-        with ZipFile(join(dirname(self.carto_file_path), "NEW_{carto_file_name}".format(carto_file_name=basename(self.carto_file_path))), mode='w') as new_carto_file:
-            for replacement in self.replacements:
-                original_dataset_name = replacement["original_dataset_name"]
-                new_dataset_name = replacement["new_dataset_name"]
+            self.json = self.json.replace(original_dataset_name, new_dataset_name)
 
-                json = json.replace(original_dataset_name, new_dataset_name)
+            new_dataset = self.sql.send("select * from {dataset}".format(dataset=replacement["new_dataset_name"]), format="gpkg")
+            zip_buffer.writestr(join(self.visualization_id, replacement["new_dataset_name"] + ".gpkg"), new_dataset)
 
-                new_dataset = sql.send("select * from {dataset}".format(dataset=replacement["new_dataset_name"]), format="gpkg")
-                new_carto_file.writestr(join(visualization_id, replacement["new_dataset_name"] + ".gpkg"), new_dataset)
+    def get_new(self, destination_path=None):
+        with ZipFile(self.dotcarto_file) as original_dotcarto_file:
+            self.visualization_id = original_dotcarto_file.namelist()[0][:-1]
+            json_file_relative_path = join(self.visualization_id, self.visualization_id + ".carto.json")
+            self.json = original_dotcarto_file.read(json_file_relative_path)
 
-            new_carto_file.writestr(json_file_relative_path, json)
+        if destination_path is not None:
+            with ZipFile(destination_path, mode='w') as new_dotcarto_file:
+                self.replace_datasets_in_dotcarto_file(new_dotcarto_file)
+                new_dotcarto_file.writestr(json_file_relative_path, self.json.encode('utf-8'))
+        else:
+            new_dotcarto_buffer = StringIO()
+            with ZipFile(new_dotcarto_buffer, mode='w') as new_dotcarto_file:
+                self.replace_datasets_in_dotcarto_file(new_dotcarto_file)
+                new_dotcarto_file.writestr(json_file_relative_path, self.json.encode('utf-8'))
+            new_dotcarto_buffer.seek(0)
+            return new_dotcarto_buffer
