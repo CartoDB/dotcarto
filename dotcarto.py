@@ -1,13 +1,9 @@
-import ConfigParser
 from os.path import join
 from zipfile import ZipFile
 from StringIO import StringIO
 
 from carto.sql import SQLClient
 from carto.auth import APIKeyAuthClient
-
-config = ConfigParser.RawConfigParser()
-config.read("dotcarto.conf")
 
 
 class DotCartoFile(object):

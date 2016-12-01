@@ -7,7 +7,7 @@ Assuming there is a .carto file called `my_carto_file.carto` that came as the re
 ```python
 from dotcarto import DotCartoFile
 
-carto_file = DotCartoFile("my_carto_file.carto")
+carto_file = DotCartoFile("my_carto_file.carto", "https://my_carto_account.carto.com/api/", "my_api_key")
 
 carto_file.replace_dataset("customers", "customers_new")
 carto_file.replace_dataset("providers", "providers_new")
